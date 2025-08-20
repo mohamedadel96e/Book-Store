@@ -1,0 +1,27 @@
+{
+  "name": "book-store",
+  "version": "1.0.0",
+  "description": "Library of Worlds is a living digital library where every book feels alive. Some stories stay with you forever, while others visit for just a while — inspired by Marvel’s multiverse.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohamedadel96e/Book-Store.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mohamedadel96e/Book-Store/issues"
+  },
+  "homepage": "https://github.com/mohamedadel96e/Book-Store#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.17.2"
+  }
+}
