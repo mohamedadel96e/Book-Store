@@ -1,4 +1,5 @@
 const express = require('express');
+
 const colors = require('colors');
 const dotenv = require('dotenv').config();
 const cors = require('cors');
@@ -18,7 +19,7 @@ app.use(express.urlencoded({ extended: false }));
 
 // --- API Routes ---
 app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api/books', require('./routes/bookRoutes'));
+app.use('/api/books', require('./routes/bookRoutes'));
 
 // Custom Error Handler
 app.use(errorHandler);
