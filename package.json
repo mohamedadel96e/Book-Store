@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+
     "dev": "nodemon server.js"
   },
   "repository": {
@@ -20,8 +21,12 @@
   "homepage": "https://github.com/mohamedadel96e/Book-Store#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
     "express-rate-limit": "^8.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
