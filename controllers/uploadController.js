@@ -16,8 +16,17 @@ const uploadPDFFile = asyncHandler(async (req, res) => {
   }
 
   try {
+    console.log("Hello world");
+    const sanitizePublicId = (filename) => {
+      return filename.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    };
+    
+    const publicId = req.body.public_id 
+      ? sanitizePublicId(req.body.public_id)
+      : `${Date.now()}_${sanitizePublicId(req.file.originalname.replace(/\.[^/.]+$/, ""))}`;
+    
     const result = await uploadPDF(req.file.buffer, {
-      public_id: req.body.public_id, // Optional custom ID
+      public_id: publicId,
       overwrite: req.body.overwrite === 'true', // Optional overwrite
     });
 

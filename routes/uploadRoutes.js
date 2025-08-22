@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { uploadPDFFile, uploadImageFile, uploadMultipleFiles, deleteFile } = require('../controllers/uploadController');
-const { protect, watcher } = require('../middleware/authMiddleware');
+const { protect, watcher } = require('../middlewares/authMiddleware');
 const { upload } = require('../utils/uploadService');
 
 // Single PDF upload

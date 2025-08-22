@@ -8,12 +8,13 @@ const {
   deleteBook,
 } = require("../controllers/bookController");
 const {protect, watcher} = require("../middlewares/authMiddleware");
+const {upload} = require("../utils/uploadService");
 
 router.get("/", getBooks);
 router.get("/:id", getBookById);
 
-router.post("/", protect, watcher, createBook);
-router.put("/:id", protect, watcher, updateBook);
+router.post("/", protect, watcher, upload.single("content"), createBook);
+router.put("/:id", protect, watcher, upload.single("content"), updateBook);
 router.delete("/:id", protect, watcher, deleteBook);
 
 module.exports = router;

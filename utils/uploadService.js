@@ -70,6 +70,7 @@ const uploadPDF = async (buffer, options = {}) => {
   const uploadOptions = {
     folder: 'knowledge-vault/pdfs',
     resource_type: 'raw', // Use 'raw' for PDF files
+    // format: 'pdf', // Explicitly set format to PDF
     ...options,
   };
 
