@@ -80,7 +80,7 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 
-// @desc   Update User data Including the imageURL
+// @desc   Update User data Including the profileImage
 // @route  PUT  /api/users
 // @access Private
 const updateUser = asyncHandler(async (req, res) => {
@@ -100,17 +100,17 @@ const updateUser = asyncHandler(async (req, res) => {
   }
 
   // Handle image upload if file is provided
-  let imageURL = user.imageURL; // Keep existing image if no new file
+  let profileImage = user.profileImage; // Keep existing image if no new file
   if (req.file) {
     imageData = await uploadImage(req.file);
-    imageURL = imageData.secure_url;
+    profileImage = imageData.secure_url;
   }
 
   // Update user fields
   user.username = username;
   user.email = email;
   user.password = password;
-  user.imageURL = imageURL;
+  user.profileImage = profileImage;
 
   await user.save();
 
@@ -119,7 +119,7 @@ const updateUser = asyncHandler(async (req, res) => {
     username: user.username,
     email: user.email,
     role: user.role,
-    imageURL: user.imageURL,
+    profileImage: user.profileImage,
   });
 });
 
