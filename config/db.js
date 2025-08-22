@@ -1,16 +1,17 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const connectDB = async () =>
+dotenv.config();
+
+export const connectDB = async () =>
 {
     try
     {
-        await mongoose.connect("mongodb+srv://mohamedadel96e:VOyuZj2adZBJZUDD@cluster0.dzh96bu.mongodb.net/knowledge_vault?retryWrites=true&w=majority&appName=Cluster0");
-        console.log(" MongoDB Connected to Atlas Successfully!");
+        const connection = await mongoose.connect(process.env.MONGO_URI);
+        console.log(`MongoDB Connected: ${connection.connection.host} . #${connection.connection.port} `);
     }
-    catch (error)
-    {
-        console.error(" MongoDB Connection Error:", error.message );
+    catch (error) {
+        console.error(` Error: ${error.message}`);
         process.exit(1);
     }
 };
-module.exports = connectDB;
