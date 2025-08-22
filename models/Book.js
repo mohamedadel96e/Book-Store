@@ -3,18 +3,19 @@ const mongoose = require('mongoose');
 const bookSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true,
+    required: [true, "Please add a title"],
   },
   description: {
     type: String,
+    required: [true, "Please add a description"],
   },
   author: {
     type: String,
-    required: true,
+    required: [true, "please add an author"],
   },
   contentUrl: {
-    type: String,
-    required: true
+    type: String, // Should be secured
+    required: true,
   },
   coverImageUrl: {
     type: String
@@ -34,6 +35,7 @@ const bookSchema = new mongoose.Schema({
   },
   purchasePrice: {
     type: Number,
+    default: 0,
     min: 0
   },
   isBorrowable: {

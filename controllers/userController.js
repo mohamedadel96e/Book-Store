@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwtService');
+const { uploadImage } = require('../utils/uploadService');
 
 // @desc    Register new user
 // @route   POST /api/users
@@ -78,8 +79,53 @@ const getMe = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
+
+// @desc   Update User data Including the imageURL
+// @route  PUT  /api/users
+// @access Private
+const updateUser = asyncHandler(async (req, res) => {
+  const { username, email, password } = req.body;
+
+  // Validate request
+  if (!username || !email || !password) {
+    res.status(400);
+    throw new Error('Please add all fields');
+  }
+
+  // Find user and update
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Handle image upload if file is provided
+  let imageURL = user.imageURL; // Keep existing image if no new file
+  if (req.file) {
+    imageData = await uploadImage(req.file);
+    imageURL = imageData.secure_url;
+  }
+
+  // Update user fields
+  user.username = username;
+  user.email = email;
+  user.password = password;
+  user.imageURL = imageURL;
+
+  await user.save();
+
+  res.status(200).json({
+    _id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    imageURL: user.imageURL,
+  });
+});
+
 module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateUser,
 };

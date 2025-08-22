@@ -1,4 +1,4 @@
-const Book = require('../models/bookModel');
+const Book = require('../models/Book');
 
 exports.getBooks = async (req, res) => {
   try {
@@ -19,7 +19,7 @@ exports.getBookById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-exports.addBook = async (req, res) => {
+exports.createBook = async (req, res) => {
   try {
     const newBook = new Book(req.body);
     await newBook.save();
