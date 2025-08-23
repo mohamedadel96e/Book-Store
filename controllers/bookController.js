@@ -2,7 +2,22 @@ const Book = require("../models/Book");
 const {
   uploadPDF,
   deleteFromCloudinary,
+  deletePDFFromLocal,
 } = require("../utils/uploadService");
+
+// Helper function to extract filename from local PDF URL
+const getFilenameFromLocalUrl = (url) => {
+  if (!url) return null;
+  // Example URL: /storage/pdfs/filename.pdf
+  // We need to extract: 'filename.pdf'
+  try {
+    const parts = url.split("/");
+    return parts[parts.length - 1];
+  } catch (error) {
+    console.error("Error extracting filename from URL:", url, error);
+    return null;
+  }
+};
 
 // Helper function to extract public_id from Cloudinary raw URL
 const getPublicIdFromRawUrl = (url) => {
@@ -17,6 +32,11 @@ const getPublicIdFromRawUrl = (url) => {
     console.error("Error extracting public_id from URL:", url, error);
     return null;
   }
+};
+
+// Helper function to determine if URL is local or Cloudinary
+const isLocalUrl = (url) => {
+  return url && url.startsWith("/storage/");
 };
 
 exports.getBooks = async (req, res) => {
@@ -53,13 +73,13 @@ exports.createBook = async (req, res) => {
 
     const publicId = req.body.public_id
       ? sanitizePublicId(req.body.public_id)
-      : `${Date.now()}_${sanitizePublicId(
+      : `${sanitizePublicId(
           req.file.originalname.replace(/\.[^/.]+$/, "")
-        )}`;
+        )}_${Date.now()}`;
 
     // 2. Upload the file buffer to Cloudinary.
     const uploadResult = await uploadPDF(req.file.buffer, {
-      public_id: publicId,
+      filename: `${publicId}.pdf`,
       overwrite: req.body.overwrite === "true",
     });
 
@@ -88,17 +108,53 @@ exports.updateBook = async (req, res) => {
       // Find the existing book to get the old file's URL
       const existingBook = await Book.findById(req.params.id);
       if (existingBook && existingBook.contentUrl) {
-        // Extract the public_id from the old URL and delete it from Cloudinary
-        const publicId = getPublicIdFromRawUrl(
-          existingBook.contentUrl
-        );
-        if (publicId) {
-          await deleteFromCloudinary(publicId, "raw");
+        // Check if it's a local file or Cloudinary file and delete accordingly
+        if (isLocalUrl(existingBook.contentUrl)) {
+          const filename = getFilenameFromLocalUrl(
+            existingBook.contentUrl
+          );
+          if (filename) {
+            try {
+              await deletePDFFromLocal(filename);
+            } catch (error) {
+              console.warn(
+                "Could not delete old PDF file:",
+                error.message
+              );
+            }
+          }
+        } else {
+          // Legacy Cloudinary file
+          const publicId = getPublicIdFromRawUrl(
+            existingBook.contentUrl
+          );
+          if (publicId) {
+            try {
+              await deleteFromCloudinary(publicId, "raw");
+            } catch (error) {
+              console.warn(
+                "Could not delete old Cloudinary file:",
+                error.message
+              );
+            }
+          }
         }
       }
 
+      const sanitizePublicId = (filename) => {
+        return filename.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      };
+
+      const publicId = req.body.public_id
+        ? sanitizePublicId(req.body.public_id)
+        : `${sanitizePublicId(
+            req.file.originalname.replace(/\.[^/.]+$/, "")
+          )}_${Date.now()}`;
       // Upload the new file and update the contentUrl in our update data
-      const uploadResult = await uploadPDF(req.file.buffer);
+      const uploadResult = await uploadPDF(req.file.buffer, {
+        filename: `${publicId}.pdf`,
+        overwrite: req.body.overwrite === "true",
+      });
       updateData.contentUrl = uploadResult.secure_url;
     }
     // Perform the update in the database
@@ -122,20 +178,39 @@ exports.deleteBook = async (req, res) => {
     // 1. Find the book document before deleting it
     const book = await Book.findById(req.params.id);
     if (!book) {
-      return res.status(404).json({ error: 'Book not found' });
+      return res.status(404).json({error: "Book not found"});
     }
 
     // 2. Extract public_id from the URL and delete the file from Cloudinary
     if (book.contentUrl) {
-      const publicId = getPublicIdFromRawUrl(book.contentUrl);
-      if (publicId) {
-        await deleteFromCloudinary(publicId, 'raw');
+      if (isLocalUrl(book.contentUrl)) {
+        const filename = getFilenameFromLocalUrl(book.contentUrl);
+        if (filename) {
+          try {
+            await deletePDFFromLocal(filename);
+          } catch (error) {
+            console.warn("Could not delete PDF file:", error.message);
+          }
+        }
+      } else {
+        // Legacy Cloudinary file
+        const publicId = getPublicIdFromRawUrl(book.contentUrl);
+        if (publicId) {
+          try {
+            await deleteFromCloudinary(publicId, "raw");
+          } catch (error) {
+            console.warn(
+              "Could not delete Cloudinary file:",
+              error.message
+            );
+          }
+        }
       }
     }
 
     // 3. Delete the book document from MongoDB
     await Book.findByIdAndDelete(req.params.id);
-    
+
     res.json({message: "Book deleted successfully"});
   } catch (err) {
     res.status(500).json({error: err.message});

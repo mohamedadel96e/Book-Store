@@ -1,6 +1,12 @@
-const multer = require('multer');
-const cloudinary = require('../config/cloudinary');
-const { Readable } = require('stream');
+const multer = require("multer");
+const cloudinary = require("../config/cloudinary");
+const {Readable} = require("stream");
+const fs = require("fs");
+const path = require("path");
+const {promisify} = require("util");
+
+const writeFile = promisify(fs.writeFile);
+const mkdir = promisify(fs.mkdir);
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -9,18 +15,23 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   // Allow PDFs and common image formats
   const allowedTypes = [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp'
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, JPEG, PNG, GIF, and WebP files are allowed.'), false);
+    cb(
+      new Error(
+        "Invalid file type. Only PDF, JPEG, PNG, GIF, and WebP files are allowed."
+      ),
+      false
+    );
   }
 };
 
@@ -46,8 +57,8 @@ const uploadToCloudinary = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        resource_type: 'auto', // Automatically detect file type
-        folder: options.folder || 'knowledge-vault', // Organize files in folders
+        resource_type: "auto", // Automatically detect file type
+        folder: options.folder || "knowledge-vault", // Organize files in folders
         public_id: options.public_id, // Custom public ID if provided
         overwrite: options.overwrite || false,
         ...options,
@@ -67,23 +78,60 @@ const uploadToCloudinary = (buffer, options = {}) => {
 
 // Upload PDF file
 const uploadPDF = async (buffer, options = {}) => {
-  const uploadOptions = {
-    folder: 'knowledge-vault/pdfs',
-    resource_type: 'raw', // Use 'raw' for PDF files
-    // format: 'pdf', // Explicitly set format to PDF
-    ...options,
-  };
+  // const uploadOptions = {
+  //   folder: "knowledge-vault/pdfs",
+  //   resource_type: "raw", // Use 'raw' for PDF files
+  //   // format: 'pdf', // Explicitly set format to PDF
+  //   ...options,
+  // };
 
-  return await uploadToCloudinary(buffer, uploadOptions);
+  // return await uploadToCloudinary(buffer, uploadOptions);
+
+  try {
+    // Define storage directory
+    const storageDir = path.join(process.cwd(), "storage", "pdfs");
+
+    // Create directory if it doesn't exist
+    await mkdir(storageDir, {recursive: true});
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const filename =
+      options.filename || `pdf_${timestamp}_${randomString}.pdf`;
+    const filepath = path.join(storageDir, filename);
+
+    // Write file to local storage
+    await writeFile(filepath, buffer);
+
+    // Return file information similar to Cloudinary response
+    return {
+      success: true,
+      public_id: filename.replace(".pdf", ""),
+      secure_url: `/storage/pdfs/${filename}`, // URL path for serving the file
+      url: `/storage/pdfs/${filename}`,
+      original_filename: options.original_filename || filename,
+      bytes: buffer.length,
+      format: "pdf",
+      resource_type: "raw",
+      created_at: new Date().toISOString(),
+      folder: "storage/pdfs",
+      local_path: filepath, // Additional field for local file path
+    };
+  } catch (error) {
+    throw new Error(
+      `Failed to upload PDF to local storage: ${error.message}`
+    );
+  }
 };
 
 // Upload image file
 const uploadImage = async (buffer, options = {}) => {
   const uploadOptions = {
-    folder: 'knowledge-vault/images',
-    resource_type: 'image',
+    folder: "knowledge-vault/images",
+    resource_type: "image",
     transformation: [
-      { quality: 'auto', fetch_format: 'auto' }, // Optimize image quality and format
+      {quality: "auto", fetch_format: "auto"}, // Optimize image quality and format
     ],
     ...options,
   };
@@ -91,12 +139,28 @@ const uploadImage = async (buffer, options = {}) => {
   return await uploadToCloudinary(buffer, uploadOptions);
 };
 
+
+// Delete PDF file from local storage
+const deletePDFFromLocal = async (filename) => {
+  try {
+    const filepath = path.join(process.cwd(), 'storage', 'pdfs', filename);
+    const unlink = promisify(fs.unlink);
+    await unlink(filepath);
+    return { success: true, message: 'File deleted successfully' };
+  } catch (error) {
+    throw new Error(`Failed to delete PDF from local storage: ${error.message}`);
+  }
+};
+
 // Delete file from Cloudinary
-const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+const deleteFromCloudinary = async (
+  publicId,
+  resourceType = "image"
+) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.destroy(
       publicId,
-      { resource_type: resourceType },
+      {resource_type: resourceType},
       (error, result) => {
         if (error) {
           reject(error);
@@ -108,12 +172,33 @@ const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
   });
 };
 
+// Get PDF file info from local storage
+const getPDFInfo = async (filename) => {
+  try {
+    const filepath = path.join(process.cwd(), 'storage', 'pdfs', filename);
+    const stat = promisify(fs.stat);
+    const stats = await stat(filepath);
+    
+    return {
+      success: true,
+      filename: filename,
+      size: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      local_path: filepath,
+      url: `/storage/pdfs/${filename}`,
+    };
+  } catch (error) {
+    throw new Error(`Failed to get PDF info: ${error.message}`);
+  }
+};
+
 // Get file info from Cloudinary
-const getFileInfo = async (publicId, resourceType = 'image') => {
+const getFileInfo = async (publicId, resourceType = "image") => {
   return new Promise((resolve, reject) => {
     cloudinary.api.resource(
       publicId,
-      { resource_type: resourceType },
+      {resource_type: resourceType},
       (error, result) => {
         if (error) {
           reject(error);
@@ -128,10 +213,14 @@ const getFileInfo = async (publicId, resourceType = 'image') => {
 // Generate optimized image URL
 const generateOptimizedImageUrl = (publicId, options = {}) => {
   return cloudinary.url(publicId, {
-    resource_type: 'image',
+    resource_type: "image",
     transformation: [
-      { quality: 'auto', fetch_format: 'auto' },
-      { width: options.width, height: options.height, crop: options.crop || 'fill' },
+      {quality: "auto", fetch_format: "auto"},
+      {
+        width: options.width,
+        height: options.height,
+        crop: options.crop || "fill",
+      },
     ],
     secure: true,
     ...options,
@@ -143,6 +232,8 @@ module.exports = {
   uploadPDF,
   uploadImage,
   deleteFromCloudinary,
+  deletePDFFromLocal,
   getFileInfo,
+  getPDFInfo,
   generateOptimizedImageUrl,
 };

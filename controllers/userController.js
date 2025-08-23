@@ -86,31 +86,27 @@ const getMe = asyncHandler(async (req, res) => {
 const updateUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
-  // Validate request
-  if (!username || !email || !password) {
-    res.status(400);
-    throw new Error('Please add all fields');
-  }
-
-  // Find user and update
+  // Find user
   const user = await User.findById(req.user.id);
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  // Handle image upload if file is provided
-  let profileImage = user.profileImage; // Keep existing image if no new file
-  if (req.file) {
-    imageData = await uploadImage(req.file);
-    profileImage = imageData.secure_url;
+  // Update only provided fields
+  if (username) user.username = username;
+  if (email) user.email = email;
+  if (password) {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
   }
-
-  // Update user fields
-  user.username = username;
-  user.email = email;
-  user.password = password;
-  user.profileImage = profileImage;
+// console.log(req.file);
+  // Handle image upload if file is provided
+  if (req.file) {
+    const imageData = await uploadImage(req.file.buffer);
+    user.profileImage = imageData.secure_url;
+    console.log(user.profileImage);
+  }
 
   await user.save();
 
