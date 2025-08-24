@@ -8,7 +8,9 @@ const PlanSchema = new mongoose.Schema('' +
     bookLimit: { type: Number },
     booksUsed: { type: Number, default: 0 },
     startDate: { type: Date, default: Date.now },
-    endDate: { type: Date }
+    endDate: { type: Date },
+    real_price: { type: Number },
+    discount_price: { type: Number, required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Plan", PlanSchema);
