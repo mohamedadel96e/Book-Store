@@ -24,6 +24,8 @@ app.use("/api/books", require("./routes/bookRoutes"));
 app.use("/api/upload", require("./routes/uploadRoutes"));
 app.use('/storage', express.static(path.join(__dirname, 'storage')));
 app.use("/api/categories", require("./routes/add_category.js"));
+app.use("/api/plans", require("./routes/plan_logic_route"));
+
 
 // Custom Error Handler
 app.use(errorHandler);
