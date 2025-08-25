@@ -1,4 +1,7 @@
+const e = require("express");
 const Book = require("../models/Book");
+const Inventory = require("../models/Inventory");
+const Transaction = require("../models/Transactions");
 const {
   uploadPDF,
   deleteFromCloudinary,
@@ -214,5 +217,127 @@ exports.deleteBook = async (req, res) => {
     res.json({message: "Book deleted successfully"});
   } catch (err) {
     res.status(500).json({error: err.message});
+  }
+};
+exports.purchaseBook = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({error: "Book not found"});
+    }
+
+    // Check if the user has already purchased the book
+    const existingPurchase = await Inventory.findOne({
+      user: req.user.id,
+      book: req.params.id
+    });
+
+    if (existingPurchase) {
+      return res.status(400).json({error: "Book already purchased"});
+    }
+
+    // Create a new inventory entry for the purchase
+    const newPurchase = new Inventory({
+      user: req.user.id,
+      book: req.params.id,
+      ownershipType: "owned"
+    });
+
+    const newTransaction = new Transaction({
+      user: req.user.id,
+      book: req.params.id,
+      type: "purchase",
+      amount: 1,
+      transactionDate: new Date()
+    });
+
+    await Promise.all([newPurchase.save(), newTransaction.save()]);
+    res.status(201).json({message: "Book purchased successfully"});
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
+};
+exports.downloadBook = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Check if the book exists in user's inventory
+    const inventory = await Inventory.findOne({ 
+      user: req.user.id, 
+      book: req.params.id,
+      ownershipType: 'owned'
+    });
+    
+    if (!inventory) {
+      return res.status(403).json({ error: "You don't own this book" });
+    }
+
+    if (!book.contentUrl) {
+      return res.status(404).json({ error: "Book content not found" });
+    }
+
+    // For Cloudinary URLs, redirect to the secure URL
+    if (!isLocalUrl(book.contentUrl)) {
+      return res.json({ downloadUrl: book.contentUrl });
+    }
+
+    // For local files, send the file from disk
+    const filename = getFilenameFromLocalUrl(book.contentUrl);
+    if (!filename) {
+      return res.status(404).json({ error: "PDF file not found" });
+    }
+
+    const path = require("path");
+    const filePath = path.join(__dirname, "..", "storage", "pdfs", filename);
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error("Download error:", err);
+        res.status(500).json({ error: "Failed to download PDF file" });
+      }
+    });
+  } catch (err) {
+    console.error("Download error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+exports.borrowBook = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Check if the user has already borrowed the book
+    const existingBorrow = await Inventory.findOne({
+      user: req.user.id,
+      book: req.params.id
+    });
+
+    if (existingBorrow) {
+      return res.status(400).json({ error: "Book already borrowed" });
+    }
+
+    // Create a new borrow entry
+    const newBorrow = new Inventory({
+      user: req.user.id,
+      book: req.params.id,
+      ownershipType: "borrowed"
+    });
+
+    const newTransaction = new Transaction({
+      user: req.user.id,
+      book: req.params.id,
+      type: "borrow",
+      amount: 1,
+      transactionDate: new Date()
+    });
+
+    await Promise.all([newBorrow.save(), newTransaction.save()]);
+    res.status(201).json({ message: "Book borrowed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
