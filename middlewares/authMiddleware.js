@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+const Inventory = require('../models/Inventory');
 const { verifyToken } = require('../utils/jwtService');
 
 const protect = asyncHandler(async (req, res, next) => {
@@ -39,4 +40,18 @@ const watcher = (req, res, next) => {
     }
 }
 
-module.exports = { protect, watcher };
+const purchaser = (req, res, next) => {
+  Inventory.findOne({ user: req.user.id, book: req.params.id, ownershipType: "purchased" })
+    .then(inventory => {
+      if (inventory) {
+        next();
+      } else {
+        res.status(401).json({ error: "Not authorized as a Purchaser" });
+      }
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
+    });
+};
+
+module.exports = { protect, watcher, purchaser };
