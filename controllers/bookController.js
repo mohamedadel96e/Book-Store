@@ -229,7 +229,7 @@ exports.purchaseBook = async (req, res) => {
     // Check if the user has already purchased the book
     const existingPurchase = await Inventory.findOne({
       user: req.user.id,
-      book: req.params.id
+      book: req.params.id,
     });
 
     if (existingPurchase) {
