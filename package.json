@@ -4,7 +4,9 @@
   "description": "Library of Worlds is a living digital library where every book feels alive. Some stories stay with you forever, while others visit for just a while — inspired by Marvel’s multiverse.",
   "main": "index.js",
   "scripts": {
-    "seed": "./seeders.js"
+    "seed": "./seeders.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "repository": {
     "type": "git",
