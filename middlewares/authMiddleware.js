@@ -41,7 +41,7 @@ const watcher = (req, res, next) => {
 }
 
 const purchaser = (req, res, next) => {
-  Inventory.findOne({ user: req.user.id, book: req.params.id, ownershipType: "purchased" })
+  Inventory.findOne({ user: req.user.id, book: req.params.id, ownershipType: "owned" })
     .then(inventory => {
       if (inventory) {
         next();
