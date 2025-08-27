@@ -76,26 +76,26 @@ const userSchema = mongoose.Schema(
       type: String,
       required: false,
     },
-      balance: {
-        type: Number,
-        default: 10000
-    },
   },
   {timestamps: true}
 );
 
 // Method to check if user has an active subscription for a category
-userSchema.methods.hasActiveSubscription = function (
-  categoryId = null
-) {
+userSchema.methods.hasActiveSubscription = function (categoryId = null) {
   const now = new Date();
-  return this.activeSubscriptions.some(
-    (sub) =>
-      sub.isActive &&
-      sub.endDate > now &&
-      (!categoryId ||
-        sub.plan.category?.toString() === categoryId.toString())
-  );
+  return this.activeSubscriptions.some((sub) => {
+    if (!sub.isActive || sub.endDate <= now) {
+      return false;
+    }
+    
+    if (!categoryId) {
+      return true; // Any active subscription
+    }
+    
+    // Check if the subscription's plan has the specific category
+    const planCategory = sub.plan.category || (sub.plan._id && sub.plan.category);
+    return planCategory && planCategory.toString() === categoryId.toString();
+  });
 };
 
 // Method to check if user owns a specific book

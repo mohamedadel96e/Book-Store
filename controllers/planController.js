@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Plan = require('../models/Plan');
 const Category = require('../models/Category');
@@ -52,79 +53,80 @@ const subscribeToCategoryPlan = asyncHandler(async (req, res) => {
     const { categoryId, planType } = req.body; // planType: '1_month', '3_months', etc.
     const userId = req.user._id;
 
+    // Validate input
+    if (!categoryId || !planType) {
+      return res.status(400).json({error: "Category ID and plan type are required"});
+    }
+
     // Validate category
     const category = await Category.findById(categoryId);
     if (!category) {
-      res.status(404);
-      throw new Error('Category not found');
+      return res.status(404).json({error: "Category not found"});
     }
 
     // Validate plan type
     if (!SUBSCRIPTION_PLANS.category_access[planType]) {
-      res.status(400);
-      throw new Error('Invalid plan type');
+      return res.status(400).json({error: "Invalid plan type"});
     }
 
-    const planDetails = SUBSCRIPTION_PLANS.category_access[planType];
+  const planDetails = SUBSCRIPTION_PLANS.category_access[planType];
 
-    // Check if user already has active subscription for this category
-    const existingPlan = await Plan.findOne({
-      user: userId,
-      type: 'category_access',
-      category: categoryId,
-      endDate: { $gt: new Date() }
-    });
+  // Check if user already has active subscription for this category
+  const existingPlan = await Plan.findOne({
+    user: userId,
+    type: 'category_access',
+    category: categoryId,
+    endDate: { $gt: new Date() }
+  });
 
-    if (existingPlan) {
-      res.status(400);
-      throw new Error('You already have an active subscription for this category');
-    }
+  if (existingPlan) {
+    return res.status(400).json({error: "You already have an active subscription for this category"});
+  }
 
-    // Check user balance
-    const user = await User.findById(userId);
-    if (user.balance < planDetails.price) {
-      res.status(400);
-      throw new Error('Insufficient balance');
-    }
+  // Check user balance
+  const user = await User.findById(userId);
+  if (user.balance < planDetails.price) {
+    return res.status(400).json({error: "Insufficient balance"});
+  }
 
-    // Calculate dates
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(startDate.getDate() + planDetails.duration);
+  // Calculate dates
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setDate(startDate.getDate() + planDetails.duration);
 
-    // Create plan
-    const plan = await Plan.create({
-      user: userId,
-      type: 'category_access',
-      category: categoryId,
-      startDate: startDate,
-      endDate: endDate
-    });
+  // Create plan
+  const plan = await Plan.create({
+    user: userId,
+    type: 'category_access',
+    category: categoryId,
+    startDate: startDate,
+    endDate: endDate
+  });
 
-    // Update user balance and subscription
-    user.balance -= planDetails.price;
-    user.activeSubscriptions.push({
-      plan: plan._id,
-      startDate: startDate,
-      endDate: endDate
-    });
-    await user.save();
+  // Update user balance and subscription
+  user.balance -= planDetails.price;
+  user.activeSubscriptions.push({
+    plan: plan._id,
+    startDate: startDate,
+    endDate: endDate
+  });
+  await user.save();
 
-    // Create transaction
-    await Transaction.create({
-      user: userId,
-      plan: plan._id,
-      type: 'plan',
-      amount: planDetails.price
-    });
+  // Create transaction
+  await Transaction.create({
+    user: userId,
+    plan: plan._id,
+    type: 'plan',
+    amount: planDetails.price
+  });
 
-    await plan.populate('category', 'name description');
+  await plan.populate('category', 'name description');
 
-    res.json({
-      message: 'Successfully subscribed to category plan',
-      plan: plan,
-      remainingBalance: user.balance
-    });
+  res.json({
+    message: 'Successfully subscribed to category plan',
+    plan: plan,
+    remainingBalance: user.balance
+  });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -138,70 +140,72 @@ const subscribeToLimitedPlan = asyncHandler(async (req, res) => {
     const { planType } = req.body; // planType: '5_books_month', '10_books_month', etc.
     const userId = req.user._id;
 
+    // Validate input
+    if (!planType) {
+      return res.status(400).json({error: "Plan type is required"});
+    }
+
     // Validate plan type
     if (!SUBSCRIPTION_PLANS.limited_books[planType]) {
-      res.status(400);
-      throw new Error('Invalid plan type');
+      return res.status(400).json({error: "Invalid plan type"});
     }
 
-    const planDetails = SUBSCRIPTION_PLANS.limited_books[planType];
+  const planDetails = SUBSCRIPTION_PLANS.limited_books[planType];
 
-    // Check if user already has active limited books subscription
-    const existingPlan = await Plan.findOne({
-      user: userId,
-      type: 'limited_books',
-      endDate: { $gt: new Date() }
-    });
+  // Check if user already has active limited books subscription
+  const existingPlan = await Plan.findOne({
+    user: userId,
+    type: 'limited_books',
+    endDate: { $gt: new Date() }
+  });
 
-    if (existingPlan) {
-      res.status(400);
-      throw new Error('You already have an active limited books subscription');
-    }
+  if (existingPlan) {
+    return res.status(400).json({error: "You already have an active limited books subscription"});
+  }
 
-    // Check user balance
-    const user = await User.findById(userId);
-    if (user.balance < planDetails.price) {
-      res.status(400);
-      throw new Error('Insufficient balance');
-    }
+  // Check user balance
+  const user = await User.findById(userId);
+  if (user.balance < planDetails.price) {
+    return res.status(400).json({error: "Insufficient balance"});
+  }
 
-    // Calculate dates
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(startDate.getDate() + planDetails.duration);
+  // Calculate dates
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setDate(startDate.getDate() + planDetails.duration);
 
-    // Create plan
-    const plan = await Plan.create({
-      user: userId,
-      type: 'limited_books',
-      bookLimit: planDetails.bookLimit,
-      booksUsed: 0,
-      startDate: startDate,
-      endDate: endDate
-    });
+  // Create plan
+  const plan = await Plan.create({
+    user: userId,
+    type: 'limited_books',
+    bookLimit: planDetails.bookLimit,
+    booksUsed: 0,
+    startDate: startDate,
+    endDate: endDate
+  });
 
-    // Update user balance and subscription
-    user.balance -= planDetails.price;
-    user.activeSubscriptions.push({
-      plan: plan._id,
-      startDate: startDate,
-      endDate: endDate
-    });
-    await user.save();
+  // Update user balance and subscription
+  user.balance -= planDetails.price;
+  user.activeSubscriptions.push({
+    plan: plan._id,
+    startDate: startDate,
+    endDate: endDate
+  });
+  await user.save();
 
-    // Create transaction
-    await Transaction.create({
-      user: userId,
-      plan: plan._id,
-      type: 'plan',
-      amount: planDetails.price
-    });
+  // Create transaction
+  await Transaction.create({
+    user: userId,
+    plan: plan._id,
+    type: 'plan',
+    amount: planDetails.price
+  });
 
-    res.json({
-      message: 'Successfully subscribed to limited books plan',
-      plan: plan,
-      remainingBalance: user.balance
-    });
+  res.json({
+    message: 'Successfully subscribed to limited books plan',
+    plan: plan,
+    remainingBalance: user.balance
+  });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -236,15 +240,17 @@ const cancelSubscription = asyncHandler(async (req, res) => {
     const planId = req.params.planId;
     const userId = req.user._id;
 
+    if (!planId) {
+      return res.status(400).json({error: "Plan ID is required"});
+    }
+
     const plan = await Plan.findOne({ _id: planId, user: userId });
     if (!plan) {
-      res.status(404);
-      throw new Error('Subscription not found');
+      return res.status(404).json({error: "Subscription not found"});
     }
 
     if (plan.endDate <= new Date()) {
-      res.status(400);
-      throw new Error('Subscription has already expired');
+      return res.status(400).json({error: "Subscription has already expired"});
     }
 
     // End the subscription immediately
@@ -281,8 +287,7 @@ const addBalance = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     if (!amount || amount <= 0) {
-      res.status(400);
-      throw new Error('Invalid amount');
+      return res.status(400).json({error: "Invalid amount"});
     }
 
     const user = await User.findById(userId);

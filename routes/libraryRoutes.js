@@ -10,14 +10,23 @@ const {
 } = require('../controllers/libraryController');
 const { protect, watcher } = require('../middlewares/authMiddleware');
 
+// Validation middleware for book ID
+const validateBookId = (req, res, next) => {
+  const { bookId } = req.params;
+  if (!bookId || !bookId.match(/^[0-9a-fA-F]{24}$/)) {
+    return res.status(400).json({ error: 'Invalid book ID format' });
+  }
+  next();
+};
+
 // User library operations
 router.get('/my-books', protect, getMyBooks);
-router.get('/access/:bookId', protect, getBookAccess);
+router.get('/access/:bookId', protect, validateBookId, getBookAccess);
 
 // Book transactions
-router.post('/:bookId/purchase', protect, purchaseBook);
-router.post('/:bookId/borrow', protect, borrowBook);
-router.post('/:bookId/return', protect, returnBook);
+router.post('/:bookId/purchase', protect, validateBookId, purchaseBook);
+router.post('/:bookId/borrow', protect, validateBookId, borrowBook);
+router.post('/:bookId/return', protect, validateBookId, returnBook);
 
 // Admin operations
 router.post('/cleanup-expired', protect, watcher, cleanupExpiredBooks);

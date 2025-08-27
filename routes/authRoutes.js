@@ -5,8 +5,8 @@ const { protect } = require("../middlewares/authMiddleware");
 const { upload } = require('../utils/uploadService');
 
 // Public routes
-router.post("/register", authController.register);
-router.post("/login", authController.login);
+router.post("/register", authController.registerUser);
+router.post("/login", authController.loginUser);
 
 // Protected routes
 router.get("/profile", protect, authController.getProfile);
