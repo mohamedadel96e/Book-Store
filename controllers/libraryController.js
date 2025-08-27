@@ -1,4 +1,5 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Book = require("../models/Book");
 const Plan = require("../models/Plan");
@@ -20,8 +21,7 @@ const purchaseBook = asyncHandler(async (req, res) => {
     }
 
     if (!book.isPurchasable) {
-      res.status(400);
-      throw new Error("This book is not available for purchase");
+      return res.status(400).json({error: "This book is not available for purchase"});
     }
 
     // Check if user already owns this book
@@ -45,7 +45,7 @@ const purchaseBook = asyncHandler(async (req, res) => {
       user: userId,
       book: bookId,
       type: "purchase",
-      amount: 1,
+      amount: book.purchasePrice,
       transactionDate: new Date()
     });
 
@@ -86,8 +86,7 @@ const borrowBook = asyncHandler(async (req, res) => {
 
     // Check if user already owns this book
     if (req.user.ownsBook(bookId)) {
-      res.status(400);
-      throw new Error("You already own this book");
+      return res.status(400).json({error: "You already own this book"});
     }
 
     // Check if user has already borrowed this book
@@ -101,51 +100,30 @@ const borrowBook = asyncHandler(async (req, res) => {
 
     // Check if user has active subscription for this book's category
     for (const category of book.categories) {
-      const hasSubscription = req.user.hasActiveSubscription(
-        category._id
-      );
-      if (hasSubscription) {
-        // Find the specific subscription
-        const activeSubscription = req.user.activeSubscriptions.find(
-          (sub) => {
-            const plan = sub.plan;
-            return (
-              sub.isActive &&
-              sub.endDate > new Date() &&
-              plan.category?.toString() === category._id.toString()
-            );
-          }
-        );
+      // Check for category access subscription
+      const categorySubscription = await Plan.findOne({
+        user: userId,
+        type: "category_access",
+        category: category._id,
+        endDate: { $gt: new Date() },
+        isActive: true
+      });
 
-        if (activeSubscription) {
-          const plan = await Plan.findById(activeSubscription.plan);
-          if (plan && plan.type === "category_access") {
-            canBorrow = true;
-            subscriptionUsed = plan._id;
-            break;
-          } else if (
-            plan &&
-            plan.type === "limited_books" &&
-            plan.booksUsed < plan.bookLimit
-          ) {
-            canBorrow = true;
-            subscriptionUsed = plan._id;
-            // Update books used count
-            plan.booksUsed += 1;
-            await plan.save();
-            break;
-          }
-        }
+      if (categorySubscription) {
+        canBorrow = true;
+        subscriptionUsed = categorySubscription._id;
+        break;
       }
     }
 
-    // If no subscription covers this book, check for limited_books subscription
+    // If no category subscription found, check for limited books subscription
     if (!canBorrow) {
       const limitedPlan = await Plan.findOne({
         user: userId,
         type: "limited_books",
-        endDate: {$gt: new Date()},
-        $expr: {$lt: ["$booksUsed", "$bookLimit"]},
+        endDate: { $gt: new Date() },
+        isActive: true,
+        $expr: { $lt: ["$booksUsed", "$bookLimit"] },
       });
 
       if (limitedPlan) {
@@ -172,8 +150,7 @@ const borrowBook = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     if (borrowCost > 0) {
       if (user.balance < borrowCost) {
-        res.status(400);
-        throw new Error("Insufficient balance");
+        return res.status(400).json({error: "Insufficient balance"});
       }
       user.balance -= borrowCost;
     }
@@ -230,10 +207,9 @@ const returnBook = asyncHandler(async (req, res) => {
     );
 
     if (borrowedBookIndex === -1) {
-      res.status(404);
-      throw new Error(
-        "You have not borrowed this book or it has already been returned"
-      );
+      return res.status(404).json({
+        error: "You have not borrowed this book or it has already been returned"
+      });
     }
 
     // Mark as inactive/returned
@@ -301,8 +277,7 @@ const getBookAccess = asyncHandler(async (req, res) => {
 
     const book = await Book.findById(bookId).populate("categories");
     if (!book) {
-      res.status(404);
-      throw new Error("Book not found");
+      return res.status(404).json({error: "Book not found"});
     }
 
     const hasOwned = req.user.ownsBook(bookId);
