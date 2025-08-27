@@ -15,9 +15,9 @@ router.get('/my-books', protect, getMyBooks);
 router.get('/access/:bookId', protect, getBookAccess);
 
 // Book transactions
-router.post('/purchase/:bookId', protect, purchaseBook);
-router.post('/borrow/:bookId', protect, borrowBook);
-router.post('/return/:bookId', protect, returnBook);
+router.post('/:bookId/purchase', protect, purchaseBook);
+router.post('/:bookId/borrow', protect, borrowBook);
+router.post('/:bookId/return', protect, returnBook);
 
 // Admin operations
 router.post('/cleanup-expired', protect, watcher, cleanupExpiredBooks);

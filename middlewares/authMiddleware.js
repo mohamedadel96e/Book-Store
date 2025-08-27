@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
 const User = require("../models/User");
+const { verifyToken } = require('../utils/jwtService');
+
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -14,9 +16,9 @@ const protect = asyncHandler(async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = verifyToken(token);
 
-      // Get user from the token
+      // Get user from the token with required data
       req.user = await User.findById(decoded.id)
         .populate("purchasedBooks")
         .populate("borrowedBooks.book")

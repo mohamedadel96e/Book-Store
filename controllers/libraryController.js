@@ -16,8 +16,7 @@ const purchaseBook = asyncHandler(async (req, res) => {
     // Find the book
     const book = await Book.findById(bookId).populate("categories");
     if (!book) {
-      res.status(404);
-      throw new Error("Book not found");
+      return res.status(404).json({error: "Book not found"});
     }
 
     if (!book.isPurchasable) {
@@ -27,14 +26,12 @@ const purchaseBook = asyncHandler(async (req, res) => {
 
     // Check if user already owns this book
     if (req.user.ownsBook(bookId)) {
-      res.status(400);
-      throw new Error("You already own this book");
+      return res.status(400).json({error: "Book already purchased"});
     }
 
     // Check user balance
     if (req.user.balance < book.purchasePrice) {
-      res.status(400);
-      throw new Error("Insufficient balance");
+      return res.status(400).json({error: "Insufficient balance"});
     }
 
     // Process purchase
@@ -48,7 +45,8 @@ const purchaseBook = asyncHandler(async (req, res) => {
       user: userId,
       book: bookId,
       type: "purchase",
-      amount: book.purchasePrice,
+      amount: 1,
+      transactionDate: new Date()
     });
 
     // Create inventory record
@@ -58,13 +56,13 @@ const purchaseBook = asyncHandler(async (req, res) => {
       ownershipType: "owned",
     });
 
-    res.json({
+    res.status(201).json({
       message: "Book purchased successfully",
       book: book,
       remainingBalance: user.balance,
     });
   } catch (error) {
-    res.status(400).json({error: error.message});
+    res.status(500).json({error: error.message});
   }
 });
 
@@ -79,13 +77,11 @@ const borrowBook = asyncHandler(async (req, res) => {
     // Find the book
     const book = await Book.findById(bookId).populate("categories");
     if (!book) {
-      res.status(404);
-      throw new Error("Book not found");
+      return res.status(404).json({error: "Book not found"});
     }
 
     if (!book.isBorrowable) {
-      res.status(400);
-      throw new Error("This book is not available for borrowing");
+      return res.status(400).json({error: "This book is not available for borrowing"});
     }
 
     // Check if user already owns this book
@@ -96,8 +92,7 @@ const borrowBook = asyncHandler(async (req, res) => {
 
     // Check if user has already borrowed this book
     if (req.user.hasBorrowedBook(bookId)) {
-      res.status(400);
-      throw new Error("You have already borrowed this book");
+      return res.status(400).json({ error: "Book already borrowed" });
     }
 
     let canBorrow = false;

@@ -283,15 +283,13 @@ exports.downloadBook = asyncHandler(async (req, res) => {
     // Check if user has access to this book (middleware should handle this)
     const book = await Book.findById(bookId);
     if (!book) {
-      res.status(404);
-      throw new Error("Book not found");
+      return res.status(404).json({error: "Book not found"});
     }
 
-    const filePath = path.join(__dirname, "..", book.contentUrl); 
+    const filePath = path.join(__dirname, "..", book.contentUrl);
     // Check if file exists
     if (!book.contentUrl || !fs.existsSync(filePath)) {
-      res.status(404);
-      throw new Error("Book file not found");
+      return res.status(404).json({error: "Book content not found"});
     }
 
     // Increment download count
@@ -313,43 +311,41 @@ exports.downloadBook = asyncHandler(async (req, res) => {
   }
 });
 
-
-
 // @desc    Get book cover image
 // @route   GET /api/books/:id/cover
 // @access  Public
 exports.getBookCover = asyncHandler(async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
-    
+
     if (!book) {
       res.status(404);
-      throw new Error('Book not found');
+      throw new Error("Book not found");
     }
 
     if (!book.coverImageUrl || !fs.existsSync(book.coverImageUrl)) {
       res.status(404);
-      throw new Error('Cover image not found');
+      throw new Error("Cover image not found");
     }
 
     // Set appropriate headers
     const ext = path.extname(book.coverImageUrl).toLowerCase();
     const mimeTypes = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp'
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
     };
 
-    res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    res.setHeader("Content-Type", mimeTypes[ext] || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
 
     // Stream the image
     const imageStream = fs.createReadStream(book.coverImageUrl);
     imageStream.pipe(res);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({error: error.message});
   }
 });
 
@@ -358,40 +354,40 @@ exports.getBookCover = asyncHandler(async (req, res) => {
 // @access  Private
 exports.rateBook = asyncHandler(async (req, res) => {
   try {
-    console.log(req.body);;
-    const { rating } = req.body;
-    
+    const {rating} = req.body;
+
     if (!rating || rating < 1 || rating > 5) {
       res.status(400);
-      throw new Error('Rating must be between 1 and 5');
+      throw new Error("Rating must be between 1 and 5");
     }
 
     const book = await Book.findById(req.params.id);
     if (!book) {
       res.status(404);
-      throw new Error('Book not found');
+      throw new Error("Book not found");
     }
 
     // Calculate new average rating
-    const currentTotal = book.rating.averageRating * book.rating.totalRatings;
+    const currentTotal =
+      book.rating.averageRating * book.rating.totalRatings;
     const newTotal = currentTotal + rating;
     const newCount = book.rating.totalRatings + 1;
     const newAverage = newTotal / newCount;
 
     book.rating.averageRating = Math.round(newAverage * 10) / 10; // Round to 1 decimal
     book.rating.totalRatings = newCount;
-    
+
     await book.save();
 
     res.json({
-      message: 'Rating submitted successfully',
+      message: "Rating submitted successfully",
       newRating: {
         averageRating: book.rating.averageRating,
-        totalRatings: book.rating.totalRatings
-      }
+        totalRatings: book.rating.totalRatings,
+      },
     });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({error: error.message});
   }
 });
 
@@ -400,7 +396,7 @@ exports.rateBook = asyncHandler(async (req, res) => {
 // @access  Public
 exports.searchBooks = asyncHandler(async (req, res) => {
   try {
-    const { q, category, type, author, minRating } = req.query;
+    const {q, category, type, author, minRating} = req.query;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const startIndex = (page - 1) * limit;
@@ -409,31 +405,31 @@ exports.searchBooks = asyncHandler(async (req, res) => {
 
     // Text search
     if (q) {
-      query.$text = { $search: q };
+      query.$text = {$search: q};
     }
 
     // Filters
     if (category) {
       query.categories = category;
     }
-    
+
     if (type) {
       query.type = type;
     }
-    
+
     if (author) {
-      query.author = { $regex: author, $options: 'i' };
+      query.author = {$regex: author, $options: "i"};
     }
-    
+
     if (minRating) {
-      query['rating.averageRating'] = { $gte: parseFloat(minRating) };
+      query["rating.averageRating"] = {$gte: parseFloat(minRating)};
     }
 
     const total = await Book.countDocuments(query);
     const books = await Book.find(query)
-      .populate('categories', 'name')
-      .select('-contentUrl')
-      .sort(q ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+      .populate("categories", "name")
+      .select("-contentUrl")
+      .sort(q ? {score: {$meta: "textScore"}} : {createdAt: -1})
       .limit(limit * 1)
       .skip(startIndex);
 
@@ -441,9 +437,9 @@ exports.searchBooks = asyncHandler(async (req, res) => {
       books,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      total
+      total,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({error: error.message});
   }
 });
