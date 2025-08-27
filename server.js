@@ -45,6 +45,7 @@ app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/upload", require("./routes/uploadRoutes"));
 app.use("/storage", express.static(path.join(__dirname, "storage")));
 
+
 // Custom Error Handler
 app.use(errorHandler);
 

@@ -1,6 +1,7 @@
-const jwt = require("jsonwebtoken");
-const asyncHandler = require("express-async-handler");
-const User = require("../models/User");
+
+const asyncHandler = require('express-async-handler');
+const User = require('../models/User');
+const Inventory = require('../models/Inventory');
 const { verifyToken } = require('../utils/jwtService');
 
 
@@ -99,9 +100,26 @@ const checkBookAccess = asyncHandler(async (req, res, next) => {
   throw new Error("You do not have access to this book");
 });
 
+const purchaser = (req, res, next) => {
+  Inventory.findOne({ user: req.user.id, book: req.params.id, ownershipType: "owned" })
+    .then(inventory => {
+      if (inventory) {
+        next();
+      } else {
+        res.status(401).json({ error: "Not authorized as a Purchaser" });
+      }
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
+    });
+};
+
 module.exports = {
   protect,
   watcher,
   userOrWatcher,
   checkBookAccess,
+  purchaser
 };
+
+module.exports = { protect, watcher, purchaser };

@@ -55,3 +55,4 @@ planSchema.index({user: 1, type: 1, endDate: 1});
 planSchema.index({endDate: 1});
 
 module.exports = mongoose.model("Plan", planSchema);
+

@@ -1,7 +1,11 @@
+const e = require("express");
 const Book = require("../models/Book");
 const asyncHandler = require("express-async-handler");
 const fs = require("fs");
 const path = require("path");
+
+const Inventory = require("../models/Inventory");
+const Transaction = require("../models/Transactions");
 const {
   uploadPDF,
   deleteFromCloudinary,
@@ -282,6 +286,7 @@ exports.downloadBook = asyncHandler(async (req, res) => {
     const bookId = req.params.id;
     // Check if user has access to this book (middleware should handle this)
     const book = await Book.findById(bookId);
+
     if (!book) {
       return res.status(404).json({error: "Book not found"});
     }
@@ -443,3 +448,41 @@ exports.searchBooks = asyncHandler(async (req, res) => {
     res.status(500).json({error: error.message});
   }
 });
+exports.borrowBook = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Check if the user has already borrowed the book
+    const existingBorrow = await Inventory.findOne({
+      user: req.user.id,
+      book: req.params.id
+    });
+
+    if (existingBorrow) {
+      return res.status(400).json({ error: "Book already borrowed" });
+    }
+
+    // Create a new borrow entry
+    const newBorrow = new Inventory({
+      user: req.user.id,
+      book: req.params.id,
+      ownershipType: "borrowed"
+    });
+
+    const newTransaction = new Transaction({
+      user: req.user.id,
+      book: req.params.id,
+      type: "borrow",
+      amount: 1,
+      transactionDate: new Date()
+    });
+
+    await Promise.all([newBorrow.save(), newTransaction.save()]);
+    res.status(201).json({ message: "Book borrowed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
