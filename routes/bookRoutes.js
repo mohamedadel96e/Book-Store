@@ -2,20 +2,28 @@ const express = require("express");
 const router = express.Router();
 const {
   getBooks,
-  createBook,
   getBookById,
+  createBook,
   updateBook,
   deleteBook,
-  purchaseBook,
   downloadBook,
-  borrowBook
-
+  getBookCover,
+  rateBook,
+  searchBooks
 } = require("../controllers/bookController");
-const {protect, watcher , purchaser} = require("../middlewares/authMiddleware");
+const {protect, watcher, checkBookAccess} = require("../middlewares/authMiddleware");
+
 const {upload} = require("../utils/uploadService");
 
+// Public routes
 router.get("/", getBooks);
+router.get("/search", searchBooks);
 router.get("/:id", getBookById);
+router.get('/:id/cover', getBookCover);
+
+router.post('/:id/rate', protect, rateBook);
+
+router.get('/:id/download', protect, checkBookAccess, downloadBook);
 
 router.post("/", protect, watcher, upload.single("content"), createBook);
 router.put("/:id", protect, watcher, upload.single("content"), updateBook);
