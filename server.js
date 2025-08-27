@@ -36,6 +36,7 @@ app.get("/", (req, res) => {
 });
 
 // --- API Routes ---
+app.use("/api/auth", require("./routes/userRoutes")); // Auth routes
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/books", require("./routes/bookRoutes"));
 app.use("/api/categories", require("./routes/categoryRoutes"));
@@ -52,3 +53,6 @@ app.use(errorHandler);
 app.listen(port, () =>
   console.log(`Server started on port ${port}`.cyan.underline)
 );
+
+// Export the app for testing
+module.exports = app;

@@ -1,11 +1,13 @@
 const e = require("express");
+const mongoose = require("mongoose");
 const Book = require("../models/Book");
+const Category = require("../models/Category");
 const asyncHandler = require("express-async-handler");
 const fs = require("fs");
 const path = require("path");
 
 const Inventory = require("../models/Inventory");
-const Transaction = require("../models/Transactions");
+const Transaction = require("../models/Transaction");
 const {
   uploadPDF,
   deleteFromCloudinary,
@@ -57,9 +59,28 @@ exports.getBooks = asyncHandler(async (req, res) => {
 
     let query = {};
 
-    // Filter by category
+    // Filter by category - handle both ObjectId and category name
     if (req.query.category) {
-      query.categories = req.query.category;
+      // Check if it's a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(req.query.category)) {
+        query.categories = req.query.category;
+      } else {
+        // If not ObjectId, search by category name
+        const categoryDoc = await Category.findOne({ 
+          name: { $regex: new RegExp(req.query.category, 'i') } 
+        });
+        if (categoryDoc) {
+          query.categories = categoryDoc._id;
+        } else {
+          // If category not found, return empty results
+          return res.json({
+            books: [],
+            totalPages: 0,
+            currentPage: page,
+            total: 0,
+          });
+        }
+      }
     }
 
     // Filter by type
@@ -413,9 +434,28 @@ exports.searchBooks = asyncHandler(async (req, res) => {
       query.$text = {$search: q};
     }
 
-    // Filters
+    // Category filter - handle both ObjectId and category name
     if (category) {
-      query.categories = category;
+      // Check if it's a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        query.categories = category;
+      } else {
+        // If not ObjectId, search by category name
+        const categoryDoc = await Category.findOne({ 
+          name: { $regex: new RegExp(category, 'i') } 
+        });
+        if (categoryDoc) {
+          query.categories = categoryDoc._id;
+        } else {
+          // If category not found, return empty results
+          return res.json({
+            books: [],
+            totalPages: 0,
+            currentPage: page,
+            total: 0,
+          });
+        }
+      }
     }
 
     if (type) {
@@ -429,7 +469,7 @@ exports.searchBooks = asyncHandler(async (req, res) => {
     if (minRating) {
       query["rating.averageRating"] = {$gte: parseFloat(minRating)};
     }
-
+    
     const total = await Book.countDocuments(query);
     const books = await Book.find(query)
       .populate("categories", "name")
