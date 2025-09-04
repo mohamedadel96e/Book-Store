@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "book-store-api-collection",
+		"_postman_id": "3907e8e2-30e0-42a2-acbb-695a3b71b13d",
 		"name": "Book Store API - Complete Collection",
 		"description": "Comprehensive API collection for the Book Store application with authentication, library management, subscriptions, and admin features.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "book-store-api"
+		"_exporter_id": "40131110"
 	},
 	"item": [
 		{
@@ -51,7 +51,8 @@
 									"    pm.environment.set('userId', response._id);",
 									"}"
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
@@ -65,7 +66,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+							"raw": "{\n  \"email\": \"mohamedadel96e@gmail.com\",\n  \"password\": \"123456789\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/login",
@@ -337,7 +338,7 @@
 							"formdata": [
 								{
 									"key": "title",
-									"value": "New Book Title",
+									"value": "Linux Book Test",
 									"type": "text"
 								},
 								{
@@ -383,7 +384,7 @@
 								{
 									"key": "content",
 									"type": "file",
-									"src": []
+									"src": "/home/mohamed-ahmed-adel/Downloads/CV/Mohamed_Adel's_CV.pdf"
 								}
 							]
 						},
@@ -557,6 +558,9 @@
 				{
 					"name": "Borrow Book",
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [
 							{
@@ -693,40 +697,6 @@
 							]
 						},
 						"description": "Subscribe to category access plan"
-					},
-					"response": []
-				},
-				{
-					"name": "Subscribe to Limited Books Plan",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{authToken}}"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"planType\": \"5_books_month\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/plans/subscribe/limited",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"plans",
-								"subscribe",
-								"limited"
-							]
-						},
-						"description": "Subscribe to limited books plan"
 					},
 					"response": []
 				},
@@ -991,7 +961,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/analytics/overview",
+							"raw": "{{baseUrl}}/api/analytics/dashboard",
 							"host": [
 								"{{baseUrl}}"
 							],
