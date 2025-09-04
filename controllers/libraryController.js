@@ -24,21 +24,23 @@ const purchaseBook = asyncHandler(async (req, res) => {
       return res.status(400).json({error: "This book is not available for purchase"});
     }
 
+    // Get fresh user data to check current state
+    const currentUser = await User.findById(userId).populate("purchasedBooks");
+
     // Check if user already owns this book
-    if (req.user.ownsBook(bookId)) {
+    if (currentUser.ownsBook(bookId)) {
       return res.status(400).json({error: "Book already purchased"});
     }
 
     // Check user balance
-    if (req.user.balance < book.purchasePrice) {
+    if (currentUser.balance < book.purchasePrice) {
       return res.status(400).json({error: "Insufficient balance"});
     }
 
     // Process purchase
-    const user = await User.findById(userId);
-    user.balance -= book.purchasePrice;
-    user.purchasedBooks.push(bookId);
-    await user.save();
+    currentUser.balance -= book.purchasePrice;
+    currentUser.purchasedBooks.push(bookId);
+    await currentUser.save();
 
     // Create transaction record
     await Transaction.create({
@@ -59,7 +61,7 @@ const purchaseBook = asyncHandler(async (req, res) => {
     res.status(201).json({
       message: "Book purchased successfully",
       book: book,
-      remainingBalance: user.balance,
+      remainingBalance: currentUser.balance,
     });
   } catch (error) {
     res.status(500).json({error: error.message});
@@ -84,13 +86,18 @@ const borrowBook = asyncHandler(async (req, res) => {
       return res.status(400).json({error: "This book is not available for borrowing"});
     }
 
+    // Get fresh user data to check current state
+    const currentUser = await User.findById(userId)
+      .populate("purchasedBooks")
+      .populate("borrowedBooks.book");
+
     // Check if user already owns this book
-    if (req.user.ownsBook(bookId)) {
+    if (currentUser.ownsBook(bookId)) {
       return res.status(400).json({error: "You already own this book"});
     }
 
     // Check if user has already borrowed this book
-    if (req.user.hasBorrowedBook(bookId)) {
+    if (currentUser.hasBorrowedBook(bookId)) {
       return res.status(400).json({ error: "Book already borrowed" });
     }
 
@@ -159,6 +166,7 @@ const borrowBook = asyncHandler(async (req, res) => {
       book: bookId,
       expiresAt: expiryDate,
       borrowedAt: new Date(),
+      isActive: true,
     });
     await user.save();
 
@@ -200,6 +208,7 @@ const returnBook = asyncHandler(async (req, res) => {
     const bookId = req.params.bookId;
     const userId = req.user._id;
 
+    // Get fresh user data
     const user = await User.findById(userId);
     const borrowedBookIndex = user.borrowedBooks.findIndex(
       (borrowed) =>
@@ -280,10 +289,16 @@ const getBookAccess = asyncHandler(async (req, res) => {
       return res.status(404).json({error: "Book not found"});
     }
 
-    const hasOwned = req.user.ownsBook(bookId);
-    const hasBorrowed = req.user.hasBorrowedBook(bookId);
+    // Get fresh user data to check current state
+    const currentUser = await User.findById(userId)
+      .populate("purchasedBooks")
+      .populate("borrowedBooks.book")
+      .populate("activeSubscriptions.plan");
+
+    const hasOwned = currentUser.ownsBook(bookId);
+    const hasBorrowed = currentUser.hasBorrowedBook(bookId);
     const hasSubscription = book.categories.some((cat) =>
-      req.user.hasActiveSubscription(cat._id)
+      currentUser.hasActiveSubscription(cat._id)
     );
 
     let accessType = "none";
@@ -293,7 +308,7 @@ const getBookAccess = asyncHandler(async (req, res) => {
       accessType = "owned";
     } else if (hasBorrowed) {
       accessType = "borrowed";
-      const borrowedBook = req.user.borrowedBooks.find(
+      const borrowedBook = currentUser.borrowedBooks.find(
         (borrowed) =>
           borrowed.book.toString() === bookId && borrowed.isActive
       );

@@ -329,19 +329,18 @@ describe('Integration Tests - Full Workflow', () => {
 
     it('should handle limited books plan exhaustion', async () => {
       // Exhaust the limited books plan (already used 1, plan has 5 books limit)
+      const tempBooks = [];
       for (let i = 0; i < 4; i++) {
         const tempBook = await Book.create({
           ...global.testHelpers.createTestBook(),
           categories: [testCategory2._id]
         });
+        tempBooks.push(tempBook);
 
         await request(app)
           .post(`/api/library/${tempBook._id}/borrow`)
           .set('Authorization', `Bearer ${newAuthToken}`)
           .expect(200);
-
-        // Clean up
-        await Book.findByIdAndDelete(tempBook._id);
       }
 
       // Now the plan should be exhausted
@@ -349,21 +348,24 @@ describe('Integration Tests - Full Workflow', () => {
       expect(exhaustedPlan.booksUsed).toBe(5);
 
       // Trying to borrow another book should still work (fall back to free borrowing)
-      const tempBook = await Book.create({
+      const oneMoreBook = await Book.create({
         ...global.testHelpers.createTestBook(),
         categories: [testCategory2._id]
       });
 
       const borrowResponse = await request(app)
-        .post(`/api/library/${tempBook._id}/borrow`)
+        .post(`/api/library/${oneMoreBook._id}/borrow`)
         .set('Authorization', `Bearer ${newAuthToken}`)
         .expect(200);
 
       expect(borrowResponse.body.message).toBe('Book borrowed successfully');
       expect(borrowResponse.body.cost).toBe(0);
 
-      // Clean up
-      await Book.findByIdAndDelete(tempBook._id);
+      // Clean up all temp books
+      for (const book of tempBooks) {
+        await Book.findByIdAndDelete(book._id);
+      }
+      await Book.findByIdAndDelete(oneMoreBook._id);
     });
   });
 
@@ -397,8 +399,8 @@ describe('Integration Tests - Full Workflow', () => {
     });
 
     it('should handle invalid ObjectId formats gracefully', async () => {
-      // Test various invalid ID formats
-      const invalidIds = ['invalid', '123', 'not-an-objectid', ''];
+      // Test various invalid ID formats (excluding empty string which causes route mismatch)
+      const invalidIds = ['invalid', '123', 'not-an-objectid'];
 
       for (const invalidId of invalidIds) {
         await request(app)

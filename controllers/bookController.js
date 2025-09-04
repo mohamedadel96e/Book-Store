@@ -121,20 +121,16 @@ exports.getBooks = asyncHandler(async (req, res) => {
   }
 });
 exports.getBookById = asyncHandler(async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id)
-      .populate("categories", "name description")
-      .select("-contentUrl"); // Don't expose direct file URL
+  const book = await Book.findById(req.params.id)
+    .populate("categories", "name description")
+    .select("-contentUrl"); // Don't expose direct file URL
 
-    if (!book) {
-      res.status(404);
-      throw new Error("Book not found");
-    }
-
-    res.json(book);
-  } catch (error) {
-    res.status(500).json({error: error.message});
+  if (!book) {
+    res.status(404);
+    throw new Error("Book not found");
   }
+
+  res.json(book);
 });
 exports.createBook = async (req, res) => {
   try {

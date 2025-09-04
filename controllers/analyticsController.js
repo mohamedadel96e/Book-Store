@@ -141,6 +141,9 @@ const getUserAnalytics = asyncHandler(async (req, res) => {
 // @access  Private/Watcher
 const getBookAnalytics = asyncHandler(async (req, res) => {
   try {
+    // Get query parameters with defaults
+    const limit = parseInt(req.query.limit) || 10;
+    
     // Books by category
     const booksByCategory = await Book.aggregate([
       { $unwind: '$categories' },
@@ -183,7 +186,7 @@ const getBookAnalytics = asyncHandler(async (req, res) => {
       { $match: { type: 'purchase', book: { $exists: true } } },
       { $group: { _id: '$book', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 10 },
+      { $limit: limit },
       {
         $lookup: {
           from: 'books',

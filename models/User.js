@@ -100,22 +100,24 @@ userSchema.methods.hasActiveSubscription = function (categoryId = null) {
 
 // Method to check if user owns a specific book
 userSchema.methods.ownsBook = function (bookId) {
-  for (const purchasedBookId of this.purchasedBooks) {
-    if (purchasedBookId._id.toString() === bookId.toString()) {
-      return true;
-    }
-  }
-  return false;
+  return this.purchasedBooks.some(purchasedBook => {
+    // Handle both ObjectId and populated object cases
+    const id = purchasedBook._id || purchasedBook;
+    return id.toString() === bookId.toString();
+  });
 };
 
 // Method to check if user has borrowed a specific book
 userSchema.methods.hasBorrowedBook = function (bookId) {
   const now = new Date();
   return this.borrowedBooks.some(
-    (borrowed) =>
-      borrowed.book.toString() === bookId.toString() &&
-      borrowed.isActive &&
-      borrowed.expiresAt > now
+    (borrowed) => {
+      // Handle both ObjectId and populated object cases
+      const id = borrowed.book._id || borrowed.book;
+      return id.toString() === bookId.toString() &&
+        borrowed.isActive &&
+        borrowed.expiresAt > now;
+    }
   );
 };
 
