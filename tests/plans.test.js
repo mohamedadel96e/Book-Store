@@ -85,7 +85,9 @@ describe('Plan Routes', () => {
 
   describe('POST /api/plans/subscribe/category', () => {
     it('should subscribe to category plan successfully', async () => {
-      const initialBalance = testUser.balance;
+      // Get fresh user data for accurate balance
+      const freshUser = await User.findById(testUser._id);
+      const initialBalance = freshUser.balance;
       const planPrice = 15; // 1_month plan price
       
       const response = await request(app)
@@ -102,7 +104,7 @@ describe('Plan Routes', () => {
       expect(response.body).toHaveProperty('remainingBalance');
       expect(response.body.remainingBalance).toBe(initialBalance - planPrice);
       expect(response.body.plan.type).toBe('category_access');
-      expect(response.body.plan.category.toString()).toBe(testCategory._id.toString());
+      expect(response.body.plan.category._id).toBe(testCategory._id.toString());
 
       // Verify plan was created
       const plan = await Plan.findById(response.body.plan._id);
@@ -188,10 +190,9 @@ describe('Plan Routes', () => {
 
     it('should check sufficient balance', async () => {
       // Create user with low balance
-      const poorUser = await User.create({
-        ...global.testHelpers.createTestUser(),
-        balance: 5
-      });
+      const poorUserData = await global.testHelpers.createTestUser();
+      poorUserData.balance = 5;
+      const poorUser = await User.create(poorUserData);
 
       const loginResponse = await request(app)
         .post('/api/auth/login')
@@ -202,15 +203,33 @@ describe('Plan Routes', () => {
 
       const poorUserToken = loginResponse.body.token;
 
+      // Ensure we have a valid category (or create one if needed)
+      let categoryResponse = await request(app)
+        .get(`/api/categories/${testCategory._id}`);
+      
+      if (categoryResponse.status !== 200) {
+        // If category not found, create a new one
+        const newCategory = await Category.create({
+          name: 'Test Category for Plans',
+          description: 'Test category'
+        });
+        testCategory = newCategory;
+      }
+
       const response = await request(app)
         .post('/api/plans/subscribe/category')
         .set('Authorization', `Bearer ${poorUserToken}`)
         .send({
           categoryId: testCategory._id,
           planType: '1_month'
-        })
-        .expect(400);
+        });
 
+      // Should be 400 for insufficient balance, but if it's 404, let's debug
+      if (response.status === 404) {
+        console.log('Route not found, response:', response.body);
+      }
+      
+      expect(response.status).toBe(400);
       expect(response.body.error).toBe('Insufficient balance');
 
       // Cleanup
@@ -230,7 +249,9 @@ describe('Plan Routes', () => {
 
   describe('POST /api/plans/subscribe/limited', () => {
     it('should subscribe to limited books plan successfully', async () => {
-      const initialBalance = testUser.balance;
+      // Get fresh user data for accurate balance
+      const freshUser = await User.findById(testUser._id);
+      const initialBalance = freshUser.balance;
       const planPrice = 10; // 5_books_month plan price
       
       const response = await request(app)
@@ -374,7 +395,9 @@ describe('Plan Routes', () => {
 
   describe('POST /api/plans/add-balance', () => {
     it('should add balance successfully', async () => {
-      const initialBalance = testUser.balance;
+      // Get fresh user data for accurate balance
+      const freshUser = await User.findById(testUser._id);
+      const initialBalance = freshUser.balance;
       const amountToAdd = 100;
 
       const response = await request(app)

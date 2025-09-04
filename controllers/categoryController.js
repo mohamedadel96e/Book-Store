@@ -18,16 +18,12 @@ const getCategories = asyncHandler(async (req, res) => {
 // @route   GET /api/categories/:id
 // @access  Public
 const getCategoryById = asyncHandler(async (req, res) => {
-  try {
-    const category = await Category.findById(req.params.id);
-    if (!category) {
-      res.status(404);
-      throw new Error('Category not found');
-    }
-    res.json(category);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  const category = await Category.findById(req.params.id);
+  if (!category) {
+    res.status(404);
+    throw new Error('Category not found');
   }
+  res.json(category);
 });
 
 // @desc    Get books by category
