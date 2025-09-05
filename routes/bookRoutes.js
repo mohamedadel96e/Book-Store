@@ -7,11 +7,12 @@ const {
   updateBook,
   deleteBook,
   downloadBook,
+  streamBook,
   getBookCover,
   rateBook,
   searchBooks
 } = require("../controllers/bookController");
-const {protect, watcher, checkBookAccess} = require("../middlewares/authMiddleware");
+const {protect, watcher, checkBookAccess, checkPurchaseAccess} = require("../middlewares/authMiddleware");
 
 const {upload} = require("../utils/uploadService");
 
@@ -23,7 +24,11 @@ router.get('/:id/cover', getBookCover);
 
 router.post('/:id/rate', protect, rateBook);
 
-router.get('/:id/download', protect, checkBookAccess, downloadBook);
+// Download route - requires purchase access only
+router.get('/:id/download', protect, checkPurchaseAccess, downloadBook);
+
+// Stream route - allows both purchased and borrowed access
+router.get('/:id/stream', protect, checkBookAccess, streamBook);
 
 router.post("/", protect, watcher, upload.single("content"), createBook);
 router.put("/:id", protect, watcher, upload.single("content"), updateBook);

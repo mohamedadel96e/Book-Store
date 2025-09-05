@@ -56,7 +56,7 @@ describe('Auth Routes (Support for other tests)', () => {
       const newUserData = await global.testHelpers.createTestUser();
       
       const response = await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send(newUserData)
         .expect(201);
 
@@ -70,7 +70,7 @@ describe('Auth Routes (Support for other tests)', () => {
 
     it('should fail with duplicate email', async () => {
       const response = await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send({
           username: 'newuser',
           email: testUser.email, // Use existing email

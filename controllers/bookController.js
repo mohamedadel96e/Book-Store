@@ -333,6 +333,67 @@ exports.downloadBook = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Stream book file (for both purchased and borrowed books)
+// @route   GET /api/books/:id/stream
+// @access  Private (requires book access - purchased, borrowed, or subscription)
+exports.streamBook = asyncHandler(async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const book = await Book.findById(bookId);
+
+    if (!book) {
+      return res.status(404).json({error: "Book not found"});
+    }
+
+    const filePath = path.join(__dirname, "..", book.contentUrl);
+    // Check if file exists
+    if (!book.contentUrl || !fs.existsSync(filePath)) {
+      return res.status(404).json({error: "Book content not found"});
+    }
+
+    // Get file stats for streaming
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      // Handle range requests for partial content (useful for large PDFs)
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+
+      res.status(206);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Content-Length", chunksize);
+      res.setHeader("Content-Type", "application/pdf");
+
+      const fileStream = fs.createReadStream(filePath, { start, end });
+      fileStream.pipe(res);
+    } else {
+      // Full file streaming
+      res.setHeader("Content-Length", fileSize);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Accept-Ranges", "bytes");
+      
+      // Set inline disposition for streaming (not download)
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${book.title}.pdf"`
+      );
+
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+    }
+
+    // Increment view count for streaming
+    await book.incrementView();
+  } catch (error) {
+    res.status(500).json({error: error.message});
+  }
+});
+
 // @desc    Get book cover image
 // @route   GET /api/books/:id/cover
 // @access  Public
