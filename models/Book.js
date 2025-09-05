@@ -88,6 +88,17 @@ const bookSchema = new mongoose.Schema({
     },
   ],
 
+  downloadCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  viewCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,
@@ -110,6 +121,12 @@ bookSchema.virtual('formattedPrice').get(function() {
 // Method to increment download count
 bookSchema.methods.incrementDownload = function() {
   this.downloadCount += 1;
+  return this.save();
+};
+
+// Method to increment view count
+bookSchema.methods.incrementView = function() {
+  this.viewCount += 1;
   return this.save();
 };
 

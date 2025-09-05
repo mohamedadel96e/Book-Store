@@ -127,17 +127,17 @@ describe('Error Handling and Edge Cases', () => {
   describe('Data validation', () => {
     it('should validate required fields in registration', async () => {
       await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send({})
         .expect(400);
 
       await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send({ username: 'test' })
         .expect(400);
 
       await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send({ username: 'test', email: 'test@test.com' })
         .expect(400);
     });
@@ -150,7 +150,7 @@ describe('Error Handling and Edge Cases', () => {
 
       // Try to create another user with same email
       const response = await request(app)
-        .post('/api/auth')
+        .post('/api/auth/register')
         .send({
           username: 'different',
           email: userData.email,
