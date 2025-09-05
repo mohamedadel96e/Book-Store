@@ -34,7 +34,7 @@ A comprehensive book store management system that allows users to browse, purcha
 
 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/mohamedadel96e/Book-Store.git
 cd Book-Store
 ```
 
