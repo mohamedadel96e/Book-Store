@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const {
   purchaseBook,
@@ -13,7 +14,7 @@ const { protect, watcher } = require('../middlewares/authMiddleware');
 // Validation middleware for book ID
 const validateBookId = (req, res, next) => {
   const { bookId } = req.params;
-  if (!bookId || !bookId.match(/^[0-9a-fA-F]{24}$/)) {
+  if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
     return res.status(400).json({ error: 'Invalid book ID format' });
   }
   next();

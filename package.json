@@ -21,7 +21,6 @@
   "bugs": {
     "url": "https://github.com/mohamedadel96e/Book-Store/issues"
   },
-  "homepage": "https://github.com/mohamedadel96e/Book-Store#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
